@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CollisionVisualization.Collision;
+using Lecture7Examples;
+using LectureExamples5;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -19,10 +22,24 @@ namespace CollisionVisualization
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
 
+        List<GameObject> _gameObjects = new List<GameObject>(); 
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
+
+            CollisionManager _collisionManager = new CollisionManager(this, 0.4f);
+            Components.Add(_collisionManager);
+            Services.AddService(typeof(CollisionManager), _collisionManager);
+
+            SpriteComponent spriteComponent = new SpriteComponent(this);
+            Components.Add(spriteComponent);
+            Services.AddService(typeof(IDrawSprites), spriteComponent);
+            IsMouseVisible = true;
+
+            graphics.PreferredBackBufferHeight = 800;
+            graphics.ApplyChanges();
         }
 
         /// <summary>
@@ -33,7 +50,7 @@ namespace CollisionVisualization
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            
 
             base.Initialize();
         }
@@ -46,8 +63,18 @@ namespace CollisionVisualization
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
+            Texture2D rockArt = Content.Load<Texture2D>("Rock");
+            
+            for (int i = 0; i < 5; i++)
+            {
+                DrawData drawable = new DrawData(rockArt, new Rectangle(i*rockArt.Width,600,rockArt.Width, rockArt.Height));
+                _gameObjects.Add(new GameObject(new Rectangle(i*rockArt.Width + 6, 664,86,90), drawable));
+                ((IDrawSprites)Services.GetService(typeof(IDrawSprites))).AddDrawable(drawable);
+                ((CollisionManager)Services.GetService(typeof(CollisionManager))).AddCollider(_gameObjects[i].CollisionBody);
+            }
+   
+            _gameObjects.Add(new PlayerCharacter(new Vector2(100,300)));
+            _gameObjects[_gameObjects.Count-1].Initialize(this);
         }
 
         /// <summary>
@@ -70,7 +97,10 @@ namespace CollisionVisualization
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
 
-            // TODO: Add your update logic here
+            foreach (GameObject gameObject in _gameObjects)
+            {
+                gameObject.Update(gameTime);
+            }
 
             base.Update(gameTime);
         }
